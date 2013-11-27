@@ -10,9 +10,6 @@
  * Copyright (c) 2013, Georgia Tech Research Corporation
  * All rights reserved.
  *
- * Humanoid Robotics Lab Georgia Institute of Technology
- * Director: Mike Stilman http://www.golems.org
- *
  * This file is provided under the following "BSD-style" License:
  * Redistribution and use in source and binary forms, with or
  * without modification, are permitted provided that the following
@@ -38,10 +35,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#define _USE_MATH_DEFINES // for MS C++
+#include <cmath>
+#include <random>
+#include <time.h>
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-#include <random>
 
 class Distribution
 {
@@ -89,9 +90,9 @@ class World
 public:
 	World()
 	{
-		srand(time(NULL));
+		srand((unsigned int)time(NULL));
 
-		goal = cv::Point2i(random()%MAP_WIDTH, random()%MAP_HEIGHT);
+		goal = cv::Point2i(rand()%MAP_WIDTH, rand()%MAP_HEIGHT);
 		distribution = std::normal_distribution<float>(0.0, COLOR_STDDEV);
 
 		createMap();
@@ -112,7 +113,7 @@ public:
 		{
 			for (int x = 0; x < MAP_WIDTH; ++x)
 			{
-				map[y][x] = (uchar)random();
+				map[y][x] = (uchar)rand();
 			}
 		}
 		map[goal.y][goal.x] = 0;

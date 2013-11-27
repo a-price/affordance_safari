@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(affordance_safari)
-set(BUILD_FLAGS "-std=c++0x -Wreturn-type")
+
 SET(CMAKE_BUILD_TYPE "Release")
 #SET(CMAKE_BUILD_TYPE "Debug")
 
@@ -8,13 +8,23 @@ SET(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
 ## System dependencies are found with CMake's conventions
+IF(WIN32)
+	set(OpenCV_DIR "C:/OpenLibraries/opencv/build")#/x64/vc11/lib")
+	set(OpenCV_INCLUDE_DIR "C:/OpenLibraries/opencv/build/include")
+	set(BUILD_FLAGS "-std=c++0x")
+ELSE(WIN32)
+	set(BUILD_FLAGS "-std=c++0x -Wreturn-type")
+ENDIF(WIN32)
+
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIR})
 link_libraries(${OpenCV_LIBS})
 
 find_package(CppUnit)
-include_directories(${CPPUNIT_INCLUDE_DIR})
-link_libraries(${CPPUNIT_LIBRARIES})
+if(${CppUnit})
+	include_directories(${CPPUNIT_INCLUDE_DIR})
+	link_libraries(${CPPUNIT_LIBRARIES})
+endif(${CppUnit})
 
 ###########
 ## Build ##

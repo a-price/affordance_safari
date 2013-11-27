@@ -40,9 +40,18 @@
 #include <random>
 #include <time.h>
 
+#include <iostream>
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
+template <class T>
+inline T square(const T &x) { return x*x; }
+
+inline float randbetween(float min, float max)
+{
+	return (max - min) * ( (float)rand() / (float)RAND_MAX ) + min;
+}
 
 class Distribution
 {
@@ -81,9 +90,11 @@ protected:
 };
 
 
-const int MAP_HEIGHT = 10;
-const int MAP_WIDTH = 10;
+const int MAP_HEIGHT = 100;
+const int MAP_WIDTH = 100;
 const float COLOR_STDDEV = 10.0f;
+const int NUM_SEARCHERS = 5;
+const int MAX_ITERS = 1000;
 
 class World
 {
@@ -131,6 +142,82 @@ public:
 	}
 };
 
+class Searcher
+{
+public:
+	Searcher(float l, cv::Point2i start, World* w)
+	{
+		affordanceLevel = l;
+		location = start;
+		world = w;
+	}
+
+	float affordanceLevel;
+	cv::Point2i location;
+	World* world;
+
+	inline float distanceFunction(cv::Point2i& a, cv::Point2i& b)
+	{
+		return square(square(a.x-b.x)+square(a.y-b.y));
+	}
+
+	std::vector<cv::Point2i> getNeighbors()
+	{
+		std::vector<cv::Point2i> neighbors;
+
+		if (location.y > 0) { neighbors.push_back(cv::Point2i(location.x, location.y - 1)); }
+		if (location.y < MAP_HEIGHT - 1) { neighbors.push_back(cv::Point2i(location.x, location.y + 1)); }
+		if (location.x > 0) { neighbors.push_back(cv::Point2i(location.x - 1, location.y)); }
+		if (location.x < MAP_WIDTH - 1) { neighbors.push_back(cv::Point2i(location.x + 1, location.y)); }
+
+		return neighbors;
+	}
+
+	bool goLocation(const cv::Point2i& destination)
+	{
+		if ((float)world->map[destination.y][destination.x] < affordanceLevel)
+		{
+			location = destination;
+			return true;
+		}
+		else
+		{
+			std::cout << "Move Failed:" << (float)world->map[destination.y][destination.x] << ">" << affordanceLevel << std::endl;
+			return false;
+		}
+	}
+
+	cv::Point2i proposeMove()
+	{
+		float neighborScores[4];
+		float totalScore;
+		std::vector<cv::Point2i> neighbors = getNeighbors();
+		for (int n = 0; n < neighbors.size(); ++n)
+		{
+			if (neighbors[n] == world->goal) { return neighbors[n]; } // Victory!
+			float score = 1/distanceFunction(world->goal, neighbors[n]);
+			neighborScores[n] = score + (n > 0 ? neighborScores[n-1] : 0);
+			totalScore += score;
+		}
+
+		for (int n = 0; n < neighbors.size(); ++n)
+		{
+			neighborScores[n] /= totalScore;
+		}
+
+		float r = randbetween(0, 1);
+
+		for (int n = 0; n < neighbors.size(); ++n)
+		{
+			if (r < neighborScores[n])
+			{
+				return neighbors[n];
+			}
+		}
+		return neighbors.back();
+	}
+};
+
 World world;
 
 cv::Vec3b displayColor(uchar val)
@@ -158,7 +245,7 @@ cv::Mat drawMap()
 	return mapPic;
 }
 
-cv::Mat drawColorMap()
+cv::Mat drawColorMap(std::vector<Searcher> searchers = std::vector<Searcher>())
 {
 	cv::Mat mapPic(MAP_HEIGHT, MAP_WIDTH, CV_8UC3);
 	for (int y = 0; y < MAP_HEIGHT; ++y)
@@ -169,6 +256,10 @@ cv::Mat drawColorMap()
 		}
 	}
 	mapPic.at<cv::Vec3b>(world.goal) = cv::Vec3b(255, 255, 255);
+	for (Searcher s : searchers)
+	{
+		mapPic.at<cv::Vec3b>(s.location) = cv::Vec3b(255, 0, 0);
+	}
 	return mapPic;
 }
 
@@ -182,6 +273,28 @@ int main()
 
 	cv::namedWindow("Color Map", cv::WINDOW_NORMAL);
 	cv::imshow("Color Map", mapPicColor);
-
 	cv::waitKey();
+
+	std::vector<Searcher> searchers;
+	for (int i = 0; i < NUM_SEARCHERS; ++i)
+	{
+		searchers.push_back(Searcher(randbetween(190, 220), cv::Point2i(rand()%MAP_WIDTH, rand()%MAP_HEIGHT), &world));
+	}
+
+	int iters = 0;
+	while (iters < MAX_ITERS)
+	{
+		for (Searcher& s : searchers)
+		{
+			s.goLocation(s.proposeMove());
+			if (s.location == world.goal) { return 0; }
+		}
+
+		mapPicColor = drawColorMap(searchers);
+		cv::imshow("Color Map", mapPicColor);
+		cv::waitKey(10);
+		iters++;
+	}
+
+
 }

@@ -43,6 +43,7 @@
 #include <iostream>
 
 #include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
 template <class T>
@@ -90,10 +91,10 @@ protected:
 };
 
 
-const int MAP_HEIGHT = 100;
-const int MAP_WIDTH = 100;
+const int MAP_HEIGHT = 300;
+const int MAP_WIDTH = 300;
 const float COLOR_STDDEV = 10.0f;
-const int NUM_SEARCHERS = 5;
+const int NUM_SEARCHERS = MAP_HEIGHT * MAP_WIDTH / 5000;
 const int MAX_ITERS = 1000;
 
 class World
@@ -127,6 +128,14 @@ public:
 				map[y][x] = (uchar)rand();
 			}
 		}
+
+		cv::Mat temp(MAP_HEIGHT, MAP_WIDTH, CV_8UC1, map, sizeof(uchar) * MAP_WIDTH);
+
+		int neighborhoodSize = (MAP_HEIGHT > MAP_WIDTH) ? MAP_WIDTH : MAP_HEIGHT;
+		neighborhoodSize /= 40;
+		if (neighborhoodSize % 2 == 0) { neighborhoodSize += 1; }
+		cv::GaussianBlur(temp, temp, cv::Size(neighborhoodSize,neighborhoodSize), 3, 3);
+
 		map[goal.y][goal.x] = 0;
 	}
 
@@ -278,7 +287,7 @@ int main()
 	std::vector<Searcher> searchers;
 	for (int i = 0; i < NUM_SEARCHERS; ++i)
 	{
-		searchers.push_back(Searcher(randbetween(190, 220), cv::Point2i(rand()%MAP_WIDTH, rand()%MAP_HEIGHT), &world));
+		searchers.push_back(Searcher(randbetween(150, 230), cv::Point2i(rand()%MAP_WIDTH, rand()%MAP_HEIGHT), &world));
 	}
 
 	int iters = 0;

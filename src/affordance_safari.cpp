@@ -190,7 +190,7 @@ public:
 	cv::Point2i proposeMove()
 	{
 		float neighborScores[4];
-		float totalScore;
+		float totalScore = 0;
 		std::vector<cv::Point2i> neighbors = getNeighbors();
 		for (int n = 0; n < neighbors.size(); ++n)
 		{
